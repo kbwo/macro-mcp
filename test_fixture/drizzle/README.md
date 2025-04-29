@@ -1,0 +1,8 @@
+## NOTE
+
+macro:
+
+```
+/export async functionoreturn await db.transaction(async(tx^[la => {^[kk$%kVj%jjjdkPVk$%k:s/db/tx/g^[
+```
+
