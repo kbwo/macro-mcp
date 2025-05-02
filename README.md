@@ -1,3 +1,20 @@
+# Macro MCP
+
+## Motivation
+
+This MCP server was created to address challenges when working with AI coding assistants. While AI assistants can help with code tasks, they sometimes:
+
+- Generate large, difficult-to-review diffs when making changes
+- Make unexpected modifications beyond what was requested
+- Require extensive context for relatively simple edits
+
+For mechanical text editing operations that follow predictable patterns, having an AI execute editor operations (like Neovim macros) offers several advantages:
+- The AI follows the same editing workflow a human would use
+- Results are more predictable and trustworthy even when diffs are complex
+- The focus is on the editing operation itself rather than generating entirely new code
+
+This server allows AI assistants to run Neovim macros on files, making them more effective for certain editing tasks.
+
 ## How to Use
 
 1. Build the project:
