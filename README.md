@@ -1,5 +1,8 @@
 # Macro MCP
 
+![Screenshot From 2025-05-02 23-32-28](https://github.com/user-attachments/assets/d69e5dfd-fa4d-414c-907c-845bc1164201)
+
+
 ## Motivation
 
 This MCP server was created to address challenges when working with AI coding assistants. While AI assistants can help with code tasks, they sometimes:
