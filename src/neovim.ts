@@ -1,25 +1,27 @@
-import { join } from 'path';
-import { promises as fs } from 'fs';
-import { exec } from 'child_process';
-import { Logger } from './logger';
+import { join } from "node:path";
+import { promises as fs } from "node:fs";
+import { exec } from "node:child_process";
+import { Logger } from "./logger.ts";
+import { tmpdir } from "node:os";
 
 type CursorPosition = {
   line: number;
   column: number;
 };
 
-export async function runMacro(
-  targetFilePath: string, 
-  macroRawPath: string, 
+export function runMacro(
+  targetFilePath: string,
+  macroRawPath: string,
   cursorPosition: CursorPosition | null,
-  useConfig: boolean = false
+  useConfig: boolean = true,
 ): Promise<CursorPosition> {
-  const { tmpdir } = require('os');
-  const cursorPosFile = join(tmpdir(), 'nvim_cursor_pos.txt');
+  const cursorPosFile = join(tmpdir(), "nvim_cursor_pos.txt");
   const logger = Logger.getInstance();
 
-  const cursorCommand = cursorPosition ? `-c 'call cursor(${cursorPosition.line}, ${cursorPosition.column})'` : '-c "call cursor(0, 0)"';
-  const configFlag = useConfig ? '' : '--noplugin -u NONE';
+  const cursorCommand = cursorPosition
+    ? `-c 'call cursor(${cursorPosition.line}, ${cursorPosition.column})'`
+    : '-c "call cursor(0, 0)"';
+  const configFlag = useConfig ? "" : "--noplugin -u NONE";
 
   const command = `nvim --headless ${configFlag} ${targetFilePath} \
   -c 'call setreg("a", readfile("${macroRawPath}", 1), "b")' \
@@ -30,38 +32,79 @@ export async function runMacro(
   -c 'redir END' \
   -c 'wq'`;
 
-  logger.debug('Executing nvim command', { command, useConfig });
+  logger.debug("Executing nvim command", { command, useConfig });
 
   return new Promise((resolve, reject) => {
-    exec(command, async (error: Error | null, stdout: string, stderr: string) => {
-      if (error) {
-        logger.error('Error executing macro', { 
-          error: error.message,
-          stderr 
-        });
-        reject(error);
-        return;
-      }
+    exec(
+      command,
+      async (error: Error | null, stdout: string, stderr: string) => {
+        let positionData: string = "";
+        try {
+          if (error) {
+            logger.error("Error executing macro", {
+              error: error.message,
+              stderr,
+            });
+            throw error;
+          }
 
-      try {
-        // Read cursor position from file
-        logger.debug('Reading cursor position from file', { file: cursorPosFile });
-        const positionData = await fs.readFile(cursorPosFile, 'utf8');
-        const [line, column] = positionData.trim().split(' ').map(Number);
+          // Read cursor position from file
+          logger.debug("Reading cursor position from file", {
+            file: cursorPosFile,
+          });
+          positionData = await fs.readFile(cursorPosFile, "utf8");
+        } catch (err) {
+          logger.error("Error during macro execution", {
+            error: err instanceof Error ? err.message : "Unknown error",
+          });
+          try {
+            // Attempt to clean up the temp file even if an error occurred
+            await fs.unlink(cursorPosFile);
+          } catch (unlinkErr) {
+            logger.debug("Failed to delete temp file during error handling", {
+              file: cursorPosFile,
+              error: unlinkErr instanceof Error
+                ? unlinkErr.message
+                : "Unknown error",
+            });
+          }
+          reject(err);
+          return;
+        }
 
-        // Delete temporary file
-        logger.debug('Deleting temporary file', { file: cursorPosFile });
-        await fs.unlink(cursorPosFile);
+        try {
+          // Parse cursor position
+          const [line, column] = positionData.trim().split(" ").map(Number);
 
-        // Return position
-        logger.debug('Returning cursor position', { line, column });
-        resolve({ line, column });
-      } catch (readError) {
-        logger.error('Error reading cursor position', { 
-          error: readError instanceof Error ? readError.message : 'Unknown error'
-        });
-        reject(readError);
-      }
-    });
+          // Delete temporary file
+          logger.debug("Deleting temporary file", { file: cursorPosFile });
+          await fs.unlink(cursorPosFile);
+
+          // Return position
+          logger.debug("Returning cursor position", { line, column });
+          resolve({ line, column });
+        } catch (parseError) {
+          // Ensure the temp file is deleted even if parsing fails
+          try {
+            await fs.unlink(cursorPosFile);
+          } catch (unlinkErr) {
+            logger.debug("Failed to delete temp file during parse error", {
+              file: cursorPosFile,
+              error: unlinkErr instanceof Error
+                ? unlinkErr.message
+                : "Unknown error",
+            });
+          }
+
+          logger.error("Error parsing cursor position", {
+            error: parseError instanceof Error
+              ? parseError.message
+              : "Unknown error",
+            data: positionData,
+          });
+          reject(parseError);
+        }
+      },
+    );
   });
 }
