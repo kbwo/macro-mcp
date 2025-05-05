@@ -21,16 +21,18 @@ server.tool("runNeovimMacro",
         cursorPosition: z.object({
             line: z.number(),
             column: z.number()
-        }).optional().describe("Current cursor position (if continuing a macro)")
+        }).optional().describe("Current cursor position (if continuing a macro)"),
+        useConfig: z.boolean().optional().describe("Whether to use Neovim user config (default: true)")
     },
-    async ({ targetFilePath, macroRawPath, cursorPosition }) => {
-        logger.info("Running Neovim macro", { targetFilePath, macroRawPath, cursorPosition });
+    async ({ targetFilePath, macroRawPath, cursorPosition, useConfig }) => {
+        logger.info("Running Neovim macro", { targetFilePath, macroRawPath, cursorPosition, useConfig });
         
         try {
             const newCursorPosition = await runMacro(
                 targetFilePath,
                 macroRawPath,
-                cursorPosition || null
+                cursorPosition || null,
+                useConfig || true
             );
 
             logger.info("Macro executed successfully", { targetFilePath, newCursorPosition });

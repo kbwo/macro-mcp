@@ -8,14 +8,20 @@ type CursorPosition = {
   column: number;
 };
 
-export async function runMacro(targetFilePath: string, macroRawPath: string, cursorPosition: CursorPosition | null): Promise<CursorPosition> {
+export async function runMacro(
+  targetFilePath: string, 
+  macroRawPath: string, 
+  cursorPosition: CursorPosition | null,
+  useConfig: boolean = false
+): Promise<CursorPosition> {
   const { tmpdir } = require('os');
   const cursorPosFile = join(tmpdir(), 'nvim_cursor_pos.txt');
   const logger = Logger.getInstance();
 
   const cursorCommand = cursorPosition ? `-c 'call cursor(${cursorPosition.line}, ${cursorPosition.column})'` : '-c "call cursor(0, 0)"';
+  const configFlag = useConfig ? '' : '--noplugin -u NONE';
 
-  const command = `nvim --headless ${targetFilePath} \
+  const command = `nvim --headless ${configFlag} ${targetFilePath} \
   -c 'call setreg("a", readfile("${macroRawPath}", 1), "b")' \
   ${cursorCommand} \
   -c 'normal! @a' \
@@ -24,7 +30,7 @@ export async function runMacro(targetFilePath: string, macroRawPath: string, cur
   -c 'redir END' \
   -c 'wq'`;
 
-  logger.debug('Executing nvim command', { command });
+  logger.debug('Executing nvim command', { command, useConfig });
 
   return new Promise((resolve, reject) => {
     exec(command, async (error: Error | null, stdout: string, stderr: string) => {

@@ -39,6 +39,7 @@ The MCP server provides a single tool called `runNeovimMacro` with these paramet
 - `cursorPosition` (optional): Current cursor position if continuing a macro
   - `line`: Line number
   - `column`: Column number
+- `useConfig` (optional): Whether to use Neovim user configuration (default: false)
 
 The tool returns:
 - `success`: Boolean indicating if the macro ran successfully
