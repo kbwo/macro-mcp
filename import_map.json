@@ -1,6 +1,0 @@
-{
-  "imports": {
-    "@modelcontextprotocol/sdk/": "npm:@modelcontextprotocol/sdk/",
-    "zod": "npm:zod"
-  }
-} 
