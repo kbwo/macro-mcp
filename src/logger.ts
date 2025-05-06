@@ -1,26 +1,32 @@
-import { createWriteStream, WriteStream, mkdirSync, existsSync } from 'fs';
-import { join, dirname } from 'path';
+import { homedir } from "node:os";
+import { dirname, join } from "node:path";
 
 export enum LogLevel {
-  DEBUG = 'DEBUG',
-  INFO = 'INFO',
-  WARN = 'WARN',
-  ERROR = 'ERROR',
+  DEBUG = "DEBUG",
+  INFO = "INFO",
+  WARN = "WARN",
+  ERROR = "ERROR",
 }
 
 export interface LogEntry {
   timestamp: string;
   level: LogLevel;
   message: string;
-  context?: Record<string, any>;
+  context?: Record<string, unknown>;
 }
 
-// Default global log path
-const DEFAULT_LOG_PATH = '/var/log/neovim-macro-mcp/app.log';
+const DEFAULT_LOG_PATH = join(
+  homedir(),
+  ".local",
+  "share",
+  "neovim-macro-mcp",
+  "logs",
+  "app.log",
+);
 
 export class Logger {
   private static instance: Logger;
-  private logStream: WriteStream | null = null;
+  private logFile: Deno.FsFile | null = null;
   private logToConsole: boolean = true;
   private logFilePath: string | null = null;
 
@@ -29,13 +35,15 @@ export class Logger {
       try {
         // Ensure the directory exists
         const dirPath = dirname(logFilePath);
-        if (!existsSync(dirPath)) {
-          mkdirSync(dirPath, { recursive: true });
+        try {
+          Deno.statSync(dirPath);
+        } catch {
+          Deno.mkdirSync(dirPath, { recursive: true });
         }
-        
-        this.logStream = createWriteStream(logFilePath, { flags: 'a' });
+
+        this.logFile = Deno.openSync(logFilePath, { write: true, append: true, create: true });
         this.logFilePath = logFilePath;
-        
+
         // Log that the logger was initialized
         this.debug(`Logger initialized with log file: ${logFilePath}`);
       } catch (error) {
@@ -60,7 +68,11 @@ export class Logger {
     return this.logFilePath;
   }
 
-  private formatLogEntry(level: LogLevel, message: string, context?: Record<string, any>): LogEntry {
+  private formatLogEntry(
+    level: LogLevel,
+    message: string,
+    context?: Record<string, unknown>,
+  ): LogEntry {
     return {
       timestamp: new Date().toISOString(),
       level,
@@ -71,41 +83,46 @@ export class Logger {
 
   private write(entry: LogEntry): void {
     const logString = JSON.stringify(entry);
-    
-    if (this.logStream) {
-      this.logStream.write(logString + '\n');
+
+    if (this.logFile) {
+      const encoder = new TextEncoder();
+      const data = encoder.encode(logString + "\n");
+      this.logFile.writeSync(data);
     }
-    
+
     if (this.logToConsole) {
-      const consoleMethod = entry.level === LogLevel.ERROR ? console.error :
-                           entry.level === LogLevel.WARN ? console.warn :
-                           entry.level === LogLevel.INFO ? console.info :
-                           console.debug;
-      
+      const consoleMethod = entry.level === LogLevel.ERROR
+        ? console.error
+        : entry.level === LogLevel.WARN
+          ? console.warn
+          : entry.level === LogLevel.INFO
+            ? console.info
+            : console.debug;
+
       consoleMethod(logString);
     }
   }
 
-  public debug(message: string, context?: Record<string, any>): void {
+  public debug(message: string, context?: Record<string, unknown>): void {
     this.write(this.formatLogEntry(LogLevel.DEBUG, message, context));
   }
 
-  public info(message: string, context?: Record<string, any>): void {
+  public info(message: string, context?: Record<string, unknown>): void {
     this.write(this.formatLogEntry(LogLevel.INFO, message, context));
   }
 
-  public warn(message: string, context?: Record<string, any>): void {
+  public warn(message: string, context?: Record<string, unknown>): void {
     this.write(this.formatLogEntry(LogLevel.WARN, message, context));
   }
 
-  public error(message: string, context?: Record<string, any>): void {
+  public error(message: string, context?: Record<string, unknown>): void {
     this.write(this.formatLogEntry(LogLevel.ERROR, message, context));
   }
 
   public close(): void {
-    if (this.logStream) {
-      this.logStream.end();
-      this.logStream = null;
+    if (this.logFile) {
+      this.logFile.close();
+      this.logFile = null;
     }
   }
-} 
+}
