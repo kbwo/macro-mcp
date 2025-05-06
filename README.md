@@ -15,21 +15,6 @@ For mechanical text editing operations that follow predictable patterns, having 
 
 This server allows AI assistants to run Neovim macros on files, making them more effective for certain editing tasks.
 
-## How to Use
-
-1. Build the project:
-   ```
-   npm run build
-   ```
-
-2. Start the MCP server:
-   ```
-   npm start
-   ```
-
-3. Interact with the server using the MCP protocol. The server provides a tool:
-   - `runNeovimMacro`: Run a Neovim macro on a specified file and return the cursor position
-
 ## MCP Tool: runNeovimMacro
 
 The MCP server provides a single tool called `runNeovimMacro` with these parameters:
@@ -54,10 +39,15 @@ The tool returns:
   "mcpServers": {
     ...
     "neovim-macro": {
-      "command": "npx",
+      "command": "deno",
       "args": [
-        "tsx",
-        "<path to mcp server>"
+        "run",
+        "--allow-read",
+        "--allow-write",
+        "--allow-env",
+        "--allow-run",
+        "--allow-sys",
+        "<path to mcp server>/main.ts"
       ]
     }
   }
