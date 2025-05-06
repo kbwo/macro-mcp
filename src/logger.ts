@@ -1,4 +1,3 @@
-import { createWriteStream, existsSync, mkdirSync, WriteStream } from "node:fs";
 import { homedir } from "node:os";
 import { dirname, join } from "node:path";
 
@@ -27,7 +26,7 @@ const DEFAULT_LOG_PATH = join(
 
 export class Logger {
   private static instance: Logger;
-  private logStream: WriteStream | null = null;
+  private logFile: Deno.FsFile | null = null;
   private logToConsole: boolean = true;
   private logFilePath: string | null = null;
 
@@ -36,11 +35,13 @@ export class Logger {
       try {
         // Ensure the directory exists
         const dirPath = dirname(logFilePath);
-        if (!existsSync(dirPath)) {
-          mkdirSync(dirPath, { recursive: true });
+        try {
+          Deno.statSync(dirPath);
+        } catch {
+          Deno.mkdirSync(dirPath, { recursive: true });
         }
 
-        this.logStream = createWriteStream(logFilePath, { flags: "a" });
+        this.logFile = Deno.openSync(logFilePath, { write: true, append: true, create: true });
         this.logFilePath = logFilePath;
 
         // Log that the logger was initialized
@@ -83,8 +84,10 @@ export class Logger {
   private write(entry: LogEntry): void {
     const logString = JSON.stringify(entry);
 
-    if (this.logStream) {
-      this.logStream.write(logString + "\n");
+    if (this.logFile) {
+      const encoder = new TextEncoder();
+      const data = encoder.encode(logString + "\n");
+      this.logFile.writeSync(data);
     }
 
     if (this.logToConsole) {
@@ -117,9 +120,9 @@ export class Logger {
   }
 
   public close(): void {
-    if (this.logStream) {
-      this.logStream.end();
-      this.logStream = null;
+    if (this.logFile) {
+      this.logFile.close();
+      this.logFile = null;
     }
   }
 }

@@ -1,11 +1,10 @@
 // src/__tests__/neovim.test.ts
 import { describe, test, afterAll } from "jsr:@std/testing/bdd";
 import { expect } from "jsr:@std/expect";
+import { resolve } from "jsr:@std/path";
+import { assertEquals } from "jsr:@std/assert";
 
 import { runMacro } from "./neovim.ts";
-import { copyFileSync, readFileSync, unlinkSync } from "node:fs";
-import assert from "node:assert";
-import path from "node:path";
 import { Logger } from "./logger.ts";
 
 describe('runMacro', () => {
@@ -16,13 +15,13 @@ describe('runMacro', () => {
 
   test('should apply vim macro to a file', async () => {
     // Define file paths
-    const targetFile = path.resolve('test_fixture/drizzle/src/index.ts');
-    const macroRawFile = path.resolve('test_fixture/drizzle/macro.raw');
-    const expectedResultFile = path.resolve('test_fixture/drizzle/src/index.ts.macro-applied.txt');
+    const targetFile = resolve('test_fixture/drizzle/src/index.ts');
+    const macroRawFile = resolve('test_fixture/drizzle/macro.raw');
+    const expectedResultFile = resolve('test_fixture/drizzle/src/index.ts.macro-applied.txt');
 
     // Create a temporary copy of the original file to test against
-    const tempFile = path.resolve('test_fixture/drizzle/src/tmp.index.ts');
-    copyFileSync(targetFile, tempFile);
+    const tempFile = resolve('test_fixture/drizzle/src/tmp.index.ts');
+    await Deno.copyFile(targetFile, tempFile);
 
     try {
       // Run the macro on the temp file
@@ -33,15 +32,15 @@ describe('runMacro', () => {
       });
 
       // Read the expected and actual output
-      const expected = readFileSync(expectedResultFile, 'utf8');
-      const actual = readFileSync(tempFile, 'utf8');
+      const expected = await Deno.readTextFile(expectedResultFile);
+      const actual = await Deno.readTextFile(tempFile);
 
       // Compare the results
-      assert.strictEqual(actual.trim(), expected.trim(), 'File content after macro application should match expected result');
+      assertEquals(actual.trim(), expected.trim(), 'File content after macro application should match expected result');
     } finally {
       // Cleanup the temp file
       try {
-        unlinkSync(tempFile);
+        await Deno.remove(tempFile);
       } catch (error) {
         console.error('Error cleaning up temp file:', error);
       }
@@ -50,13 +49,13 @@ describe('runMacro', () => {
 
   test('should apply vim macro to a file', async () => {
     // Define file paths
-    const targetFile = path.resolve('test_fixture/drizzle/src/index.ts');
-    const macroRawFile = path.resolve('test_fixture/drizzle/macro.raw');
-    const expectedResultFile = path.resolve('test_fixture/drizzle/src/index.ts.macro-applied.2.txt');
+    const targetFile = resolve('test_fixture/drizzle/src/index.ts');
+    const macroRawFile = resolve('test_fixture/drizzle/macro.raw');
+    const expectedResultFile = resolve('test_fixture/drizzle/src/index.ts.macro-applied.2.txt');
 
     // Create a temporary copy of the original file to test against
-    const tempFile = path.resolve('test_fixture/drizzle/src/tmp2.index.ts');
-    copyFileSync(targetFile, tempFile);
+    const tempFile = resolve('test_fixture/drizzle/src/tmp2.index.ts');
+    await Deno.copyFile(targetFile, tempFile);
 
     try {
       // Run the macro on the temp file
@@ -70,15 +69,15 @@ describe('runMacro', () => {
       });
 
       // Read the expected and actual output
-      const expected = readFileSync(expectedResultFile, 'utf8');
-      const actual = readFileSync(tempFile, 'utf8');
+      const expected = await Deno.readTextFile(expectedResultFile);
+      const actual = await Deno.readTextFile(tempFile);
 
       // Compare the results
-      assert.strictEqual(actual.trim(), expected.trim(), 'File content after macro application should match expected result');
+      assertEquals(actual.trim(), expected.trim(), 'File content after macro application should match expected result');
     } finally {
       // Cleanup the temp file
       try {
-        unlinkSync(tempFile);
+        await Deno.remove(tempFile);
       } catch (error) {
         console.error('Error cleaning up temp file:', error);
       }
